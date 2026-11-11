@@ -68,6 +68,10 @@ def process_college_data():
     
     # Drop unneeded credential level column now that we've filtered
     fos_df = fos_df.drop(columns=['credential_level'])
+
+    # The source uses "PS" for suppressed values; write those as missing in the clean dataset.
+    metrics = ['median_earnings_1yr', 'median_federal_debt']
+    fos_df[metrics] = fos_df[metrics].replace('PS', pd.NA)
     
     # Clean up major names (strip whitespace, ensure proper formatting)
     fos_df['major_name'] = fos_df['major_name'].str.strip()
