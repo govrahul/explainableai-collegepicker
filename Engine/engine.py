@@ -6,13 +6,18 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 DATA_DIR = 'Data'
 
-def match_colleges(user_weights, constraints=None, selected_major=None):
+def match_colleges(
+    user_weights, constraints=None, selected_major=None, ideal_size=0.5
+):
     institution_file_path = os.path.join(DATA_DIR, 'institutions_clean.csv')
     df = pd.read_csv(institution_file_path)
 
     if constraints:
         for key, value in constraints.items():
-            if key in df.columns:
+            if key in ('state', 'states') and value is not None:
+                states = [value] if isinstance(value, str) else value
+                df = df[df['state'].isin(states)]
+            elif key in df.columns:
                 df = df[df[key] == value]
 
     if selected_major:
@@ -41,7 +46,9 @@ def match_colleges(user_weights, constraints=None, selected_major=None):
     )
 
     w = np.array(user_weights)
-    ideal_vector = np.array([0.0, 1.0, 0.5]) # ideal values for price (low), graduation rate (high), and size (medium)
+    if not 0.0 <= ideal_size <= 1.0:
+        raise ValueError('ideal_size must be between 0.0 and 1.0')
+    ideal_vector = np.array([0.0, 1.0, ideal_size])
     user_vector = ideal_vector * w
     college_matrix = df[['norm_price', 'norm_grad', 'norm_size']].values * w
 
