@@ -9,3 +9,7 @@ __pycache__/
 # data
 *.csv
 ~*.xlsx
+
+# unhide data files for streamlit deployment
+!Data/institutions_clean.csv
+!Data/programs_clean.csv
