@@ -170,6 +170,22 @@ user_sat_score = st.sidebar.number_input(
     disabled=not filter_by_sat,
     placeholder="Enter your score",
 )
+filter_by_act = st.sidebar.checkbox(
+    "Apply ACT score filter",
+    help=(
+        "When enabled, only schools with a reported ACT score no more than "
+        "5 points above yours are included. Schools without ACT data are excluded."
+    ),
+)
+user_act_score = st.sidebar.number_input(
+    "Your ACT score",
+    min_value=1,
+    max_value=36,
+    value=None,
+    step=1,
+    disabled=not filter_by_act,
+    placeholder="Enter your score",
+)
 
 # Info Popover for Filter Capabilities
 with st.sidebar.popover("ℹ️ What can you filter?"):
@@ -199,6 +215,9 @@ if st.sidebar.button("🔍 Run Intelligent Match", type="primary"):
     if filter_by_sat and user_sat_score is None:
         st.error("Enter your SAT score to use the SAT score filter.")
         st.stop()
+    if filter_by_act and user_act_score is None:
+        st.error("Enter your ACT score to use the ACT score filter.")
+        st.stop()
 
     with st.spinner("🤖 Parsing query with Gemini and calculating vector distances..."):
         try:
@@ -207,6 +226,8 @@ if st.sidebar.button("🔍 Run Intelligent Match", type="primary"):
             constraints = json.loads(json_output)
             if filter_by_sat:
                 constraints["max_average_sat_score"] = user_sat_score + 100
+            if filter_by_act:
+                constraints["max_average_act_score"] = user_act_score + 5
             
             # Extract parameters for engine
             selected_major = constraints.get("major_keyword")

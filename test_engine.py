@@ -213,6 +213,26 @@ class EnginePreferenceTests(unittest.TestCase):
 
         self.assertEqual(matches["unit_id"].tolist(), [1])
 
+    def test_engine_filters_schools_above_maximum_average_act_score(self):
+        institutions = pd.DataFrame(
+            {
+                "unit_id": [1, 2, 3],
+                "school_name": ["Within limit", "Above limit", "No ACT data"],
+                "state": ["NC", "SC", "VA"],
+                "net_price": [10000, 20000, 30000],
+                "graduation_rate": [0.5, 0.7, 0.9],
+                "undergrad_size": [1000, 5000, 10000],
+                "average_act_score": [30, 31, np.nan],
+            }
+        )
+        with patch.object(engine.pd, "read_csv", return_value=institutions):
+            matches = engine.match_colleges(
+                [1.0, 1.0, 1.0],
+                {"max_average_act_score": 30},
+            )
+
+        self.assertEqual(matches["unit_id"].tolist(), [1])
+
     def test_engine_filters_new_metrics_and_institution_levels(self):
         institutions = pd.DataFrame(
             {

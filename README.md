@@ -18,6 +18,8 @@ and returns up to 10 colleges.
   weighted cosine-similarity score.
 - Optionally filter out schools whose reported average SAT score is more than
   100 points above the student's SAT score.
+- Optionally filter out schools whose reported ACT score is more than 5 points
+  above the student's ACT score.
 - Calculate a prestige score from available admission rate, SAT score,
   instructional expenditure, and Carnegie classification data, then combine it
   with the match score using the requested prestige weight.
