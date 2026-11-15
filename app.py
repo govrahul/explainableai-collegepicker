@@ -131,6 +131,17 @@ st.markdown("Transparent, vector-based matching powered by real U.S. Department 
 
 # Sidebar Configuration
 st.sidebar.header("Custom Vector Weights & Preferences")
+
+# Clear explainer popover addressing the "sum to 1" question
+with st.sidebar.popover("ℹ️ How do these weights work? (Do they need to sum to 1?)"):
+    st.markdown("""
+    **No, they do not need to sum to 1.0!**
+    
+    Your weights act as independent multipliers on each feature vector:
+    * **Setting them all to 1.0** simply gives equal, full importance to affordability, graduation rate, and campus size.
+    * **Independent scaling:** You can set all sliders to max (1.0) or zero out a feature you don't care about without worrying about percentages or math rules. Cosine similarity evaluates the directional alignment automatically.
+    """)
+
 weight_affordability = st.sidebar.slider("Affordability Weight", 0.0, 1.0, 1.0, step=0.1, 
                                          help="Higher values heavily penalize schools that have a higher net price, ranking lower-cost options closer to your ideal score.")
 weight_grad = st.sidebar.slider("Graduation Rate Weight", 0.0, 1.0, 0.8, step=0.1,
@@ -219,7 +230,7 @@ if 'top_matches' in st.session_state:
                     st.subheader(f"🎓 {row['school_name']} ({row['state']})")
                     st.caption(f"Institution ID: `{row['unit_id']}`")
                 with cols[1]:
-                    st.metric("Match Score", f"{row['match_score']:.1f}%")
+                    st.metric("Match Score", f"{row['ranking_score']:.1f}%")
                 with cols[2]:
                     net_price = row.get('net_price', 0)
                     st.metric("Net Price", f"${net_price:,.0f}" if pd.notna(net_price) else "N/A")
