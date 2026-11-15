@@ -141,7 +141,7 @@ st.sidebar.markdown("### Natural Language Search")
 
 # Info Popover for Filter Capabilities
 with st.sidebar.popover("ℹ️ What can you filter?"):
-    st.markdown("### 🧠 Intelligent Query Guide")
+    st.markdown("### Intelligent Query Guide")
     st.markdown("""
     Gemini automatically parses your description into the following filter criteria. You can ask for:
     * **📍 Location:** Specific states (e.g., *"in NC or SC"*) or Census regions (*Northeast, Midwest, South, West*).
