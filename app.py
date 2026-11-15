@@ -131,9 +131,12 @@ st.markdown("Transparent, vector-based matching powered by real U.S. Department 
 
 # Sidebar Configuration
 st.sidebar.header("Custom Vector Weights & Preferences")
-weight_affordability = st.sidebar.slider("Affordability Weight", 0.0, 1.0, 1.0, step=0.1)
-weight_grad = st.sidebar.slider("Graduation Rate Weight", 0.0, 1.0, 0.8, step=0.1)
-weight_size = st.sidebar.slider("College Size Weight", 0.0, 1.0, 0.2, step=0.1)
+weight_affordability = st.sidebar.slider("Affordability Weight", 0.0, 1.0, 1.0, step=0.1, 
+                                         help="Higher values heavily penalize schools that have a higher net price, ranking lower-cost options closer to your ideal score.")
+weight_grad = st.sidebar.slider("Graduation Rate Weight", 0.0, 1.0, 0.8, step=0.1,
+                                help="Higher values reward schools with high completion and graduation rates in the vector similarity calculation.")
+weight_size = st.sidebar.slider("College Size Weight", 0.0, 1.0, 0.2, step=0.1,
+                                help="Controls how strictly the model matches your preferred campus size (small vs. large) against your target preference.")
 user_weights = [weight_affordability, weight_grad, weight_size]
 
 st.sidebar.divider()
@@ -151,8 +154,8 @@ with st.sidebar.popover("ℹ️ What can you filter?"):
     * **📈 Success & Outcomes:** 
         * Minimum/maximum graduation rates (e.g., *"at least 70% grad rate"*).
         * 10-year median post-grad earnings thresholds.
-        * Maximum student loan debt at graduation.
-        * 3-year loan repayment rates.
+        * Maximum student loan debt at graduation (e.g., *"at most $20,000 debt at graduation"*).
+        * 3-year loan repayment rates (e.g., *"at least 20% loan repayment after 3 years"*).
     * **⭐ Prestige & Selectivity:** Requesting *elite, prestigious, selective, or top-tier* schools to weight institutional rank.
     * **🏫 Campus Size:** Small, medium, or large student populations.
     """)
