@@ -5,3 +5,4 @@ matplotlib
 google-genai
 dotenv
 streamlit
+plotly
