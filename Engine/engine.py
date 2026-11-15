@@ -34,6 +34,7 @@ def match_colleges(
             'max_median_debt_at_graduation': ('median_debt_at_graduation', 'max'),
             'min_repayment_within_3_years': ('repayment_within_3_years', 'min'),
             'max_repayment_within_3_years': ('repayment_within_3_years', 'max'),
+            'max_average_sat_score': ('average_sat_score', 'max'),
         }
         for key, value in constraints.items():
             if key in ('state', 'states') and value is not None:

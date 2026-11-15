@@ -153,6 +153,24 @@ user_weights = [weight_affordability, weight_grad, weight_size]
 st.sidebar.divider()
 st.sidebar.markdown("### Natural Language Search")
 
+filter_by_sat = st.sidebar.checkbox(
+    "Apply SAT score filter",
+    help=(
+        "When enabled, only schools with a reported average SAT score no more "
+        "than 100 points above yours are included. Schools without SAT data "
+        "are excluded."
+    ),
+)
+user_sat_score = st.sidebar.number_input(
+    "Your SAT score",
+    min_value=400,
+    max_value=1600,
+    value=None,
+    step=10,
+    disabled=not filter_by_sat,
+    placeholder="Enter your score",
+)
+
 # Info Popover for Filter Capabilities
 with st.sidebar.popover("ℹ️ What can you filter?"):
     st.markdown("### Intelligent Query Guide")
@@ -178,11 +196,17 @@ default_query = st.sidebar.text_area(
 )
 
 if st.sidebar.button("🔍 Run Intelligent Match", type="primary"):
+    if filter_by_sat and user_sat_score is None:
+        st.error("Enter your SAT score to use the SAT score filter.")
+        st.stop()
+
     with st.spinner("🤖 Parsing query with Gemini and calculating vector distances..."):
         try:
             # Step 1: Parse query via Gemini JSON mode
             json_output = parse_query_with_gemini(ai_client, default_query)
             constraints = json.loads(json_output)
+            if filter_by_sat:
+                constraints["max_average_sat_score"] = user_sat_score + 100
             
             # Extract parameters for engine
             selected_major = constraints.get("major_keyword")

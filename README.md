@@ -16,6 +16,8 @@ and returns up to 10 colleges.
   `min_graduation_rate: 0.7` means a graduation rate of at least 70%.
 - Match on affordability, graduation rate, and undergraduate size using a
   weighted cosine-similarity score.
+- Optionally filter out schools whose reported average SAT score is more than
+  100 points above the student's SAT score.
 - Calculate a prestige score from available admission rate, SAT score,
   instructional expenditure, and Carnegie classification data, then combine it
   with the match score using the requested prestige weight.
@@ -24,8 +26,8 @@ and returns up to 10 colleges.
   ROI score where data is available.
 
 The engine returns the top 10 results with scores and source columns for
-inspection. The current repository provides a Python matching backend and a
-command-line Gemini example; it does not include a web interface.
+inspection. The repository includes a Streamlit web interface and a
+command-line Gemini example.
 
 ## Project layout
 
@@ -35,6 +37,7 @@ Data/
   process_data.py                        Creates the cleaned CSV datasets
   institutions_clean.csv                 Clean institution-level records
   programs_clean.csv                     Clean bachelor's program records
+app.py                                    Streamlit web interface
 Engine/
   engine.py                              Filtering, scoring, and ranking
 test_engine.py                           Unit tests and Gemini CLI example
