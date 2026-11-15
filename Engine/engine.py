@@ -7,8 +7,20 @@ from sklearn.metrics.pairwise import cosine_similarity
 DATA_DIR = 'Data'
 
 def match_colleges(
-    user_weights, constraints=None, selected_major=None, ideal_size=0.5
+    user_weights,
+    constraints=None,
+    selected_major=None,
+    ideal_size=0.5,
+    prestige_weight=0.5,
 ):
+    if (
+        isinstance(prestige_weight, bool)
+        or not isinstance(prestige_weight, (int, float, np.number))
+        or not np.isfinite(prestige_weight)
+        or not 0.0 <= prestige_weight <= 1.0
+    ):
+        raise ValueError('prestige_weight must be between 0.0 and 1.0')
+
     institution_file_path = os.path.join(DATA_DIR, 'institutions_clean.csv')
     df = pd.read_csv(institution_file_path)
 
@@ -40,6 +52,7 @@ def match_colleges(
     if df.empty:
         return pd.DataFrame() # no matches to constraints
 
+    df = df.copy()
     scaler = MinMaxScaler()
     df[['norm_price', 'norm_grad', 'norm_size']] = scaler.fit_transform(
         df[['net_price', 'graduation_rate', 'undergrad_size']]
@@ -55,9 +68,42 @@ def match_colleges(
     similarities = cosine_similarity(college_matrix, user_vector.reshape(1, -1)).flatten()
     df['match_score'] = similarities * 100 # Convert to percentage
 
+    prestige_features = pd.DataFrame(index=df.index)
+    if 'admission_rate' in df:
+        prestige_features['admission_rate'] = 1 - pd.to_numeric(
+            df['admission_rate'], errors='coerce'
+        )
+    if 'average_sat_score' in df:
+        prestige_features['average_sat_score'] = pd.to_numeric(
+            df['average_sat_score'], errors='coerce'
+        )
+    if 'instructional_expenditure_per_student' in df:
+        prestige_features['instructional_expenditure_per_student'] = pd.to_numeric(
+            df['instructional_expenditure_per_student'], errors='coerce'
+        )
+    if 'carnegie_classification' in df:
+        classification = pd.to_numeric(
+            df['carnegie_classification'], errors='coerce'
+        )
+        prestige_features['carnegie_classification'] = (
+            (classification == 15).astype(float) * 100
+        ).where(classification.notna())
+
+    prestige_scores = pd.DataFrame(index=df.index)
+    for column in prestige_features:
+        values = prestige_features[column]
+        if column == 'carnegie_classification':
+            prestige_scores[column] = values
+        else:
+            prestige_scores[column] = values.rank(pct=True) * 100
+    df['prestige_score'] = prestige_scores.fillna(50).mean(axis=1).fillna(50)
+
     df['roi'] = np.nan
     df['roi_score'] = np.nan
-    df['ranking_score'] = df['match_score']
+    df['ranking_score'] = (
+        (1.0 - prestige_weight) * df['match_score']
+        + prestige_weight * df['prestige_score']
+    )
     if selected_major:
         has_roi_data = (
             df['median_earnings_1yr'].notna()
@@ -83,7 +129,6 @@ def match_colleges(
 
         df['roi'] = roi
         df['roi_score'] = roi_score
-        df['ranking_score'] = 0.5 * df['match_score'] + 0.5 * df['roi_score']
 
     return df.sort_values(
         by=['ranking_score', 'match_score'], ascending=False
