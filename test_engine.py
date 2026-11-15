@@ -30,6 +30,20 @@ def parse_query_with_gemini(client, user_prompt):
         "prestige preference; use a higher value when the user asks for an "
         "elite, prestigious, selective, renowned, or top-tier school, with "
         "stronger emphasis reflected by a higher value. "
+        "Also return min_median_earnings_10yr and max_median_earnings_10yr "
+        "(numeric dollar amounts or null), institution_levels (an array "
+        "containing any requested institution level codes or null), "
+        "min_graduation_rate and max_graduation_rate (numbers from 0.0 to 1.0 "
+        "or null), "
+        "min_median_debt_at_graduation and max_median_debt_at_graduation "
+        "(numeric dollar amounts or null), and min_repayment_within_3_years "
+        "and max_repayment_within_3_years (numbers from 0.0 to 1.0 or null). "
+        "Only set a minimum or maximum when the user explicitly requests that "
+        "bound; otherwise use null. Convert graduation-rate and repayment "
+        "percentages to fractions (for example, 70 percent becomes 0.7). "
+        "Map 4-year institutions to "
+        "level 1, 2-year institutions to level 2, and institutions under 2 "
+        "years to level 3. If the user does not specify a level, use null. "
         "For a named US region, return all states in that region in the states "
         "array; for one requested state, return a one-item array. Do not return "
         "a region name instead of state codes. Use Census region definitions "
@@ -94,6 +108,12 @@ class EnginePreferenceTests(unittest.TestCase):
         self.assertIn("all states in that region", prompt)
         self.assertIn("school_size", prompt)
         self.assertIn("prestige", prompt)
+        self.assertIn("min_median_earnings_10yr", prompt)
+        self.assertIn("min_graduation_rate", prompt)
+        self.assertIn("max_graduation_rate", prompt)
+        self.assertIn("institution_levels", prompt)
+        self.assertIn("level 1", prompt)
+        self.assertIn("max_repayment_within_3_years", prompt)
 
     def test_matcher_passes_state_list_and_preferred_size_to_engine(self):
         with patch.object(engine, "match_colleges", return_value="matches") as match:
@@ -150,6 +170,63 @@ class EnginePreferenceTests(unittest.TestCase):
             similarity.call_args.args[1], [[0.0, 1.0, 0.25]]
         )
         self.assertTrue(matches["prestige_score"].eq(50).all())
+
+    def test_engine_filters_requested_graduation_rate_range(self):
+        institutions = pd.DataFrame(
+            {
+                "unit_id": [1, 2, 3],
+                "school_name": ["Below range", "In range", "Above range"],
+                "state": ["NC", "SC", "VA"],
+                "net_price": [10000, 20000, 30000],
+                "graduation_rate": [0.4, 0.65, 0.9],
+                "undergrad_size": [1000, 5000, 10000],
+            }
+        )
+        with patch.object(engine.pd, "read_csv", return_value=institutions):
+            matches = engine.match_colleges(
+                [1.0, 1.0, 1.0],
+                {
+                    "min_graduation_rate": 0.5,
+                    "max_graduation_rate": 0.8,
+                },
+            )
+
+        self.assertEqual(matches["unit_id"].tolist(), [2])
+
+    def test_engine_filters_new_metrics_and_institution_levels(self):
+        institutions = pd.DataFrame(
+            {
+                "unit_id": [1, 2, 3, 4],
+                "school_name": ["A", "B", "C", "D"],
+                "state": ["NC", "SC", "NY", "VA"],
+                "net_price": [10000, 20000, 30000, 40000],
+                "graduation_rate": [0.5, 0.7, 0.9, 0.6],
+                "undergrad_size": [1000, 5000, 10000, 2000],
+                "median_earnings_10yr": ["90000", "70000", "PS", "110000"],
+                "institution_level": [1, 2, 3, 1],
+                "median_debt_at_graduation": ["15000", "PS", "25000", "30000"],
+                "repayment_within_3_years": ["0.8", "0.65", "0.9", "PS"],
+            }
+        )
+        with (
+            patch.object(engine.pd, "read_csv", return_value=institutions),
+            patch.object(
+                engine,
+                "cosine_similarity",
+                side_effect=lambda matrix, vector: np.ones((len(matrix), 1)),
+            ),
+        ):
+            matches = engine.match_colleges(
+                [1.0, 1.0, 1.0],
+                {
+                    "institution_levels": [1, 2],
+                    "min_median_earnings_10yr": 70000,
+                    "max_median_debt_at_graduation": 20000,
+                    "min_repayment_within_3_years": 0.7,
+                },
+            )
+
+        self.assertEqual(matches["unit_id"].tolist(), [1])
 
     def test_engine_ranks_by_prestige_and_returns_roi_scores(self):
         institutions = pd.DataFrame(

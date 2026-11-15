@@ -11,7 +11,8 @@ def process_college_data():
     inst_cols = [
         'UNITID', 'INSTNM', 'STABBR', 'REGION', 'LOCALE', 
         'NPT4_PUB', 'NPT4_PRIV', 'C150_4', 'UGDS', 'ADM_RATE',
-        'SAT_AVG', 'ACTCMMID', 'CCBASIC', 'INEXPFTE'
+        'SAT_AVG', 'ACTCMMID', 'CCBASIC', 'INEXPFTE', 'MD_EARN_WNE_P10',
+        'ICLEVEL', 'GRAD_DEBT_MDN', 'C150_4', 'COMPL_RPY_3YR_RT'
     ]
     
     # Load raw file (ensure your raw CSV is in the root or update path)
@@ -32,7 +33,11 @@ def process_college_data():
         'SAT_AVG': 'average_sat_score',
         'ACTCMMID': 'average_act_score',
         'CCBASIC': 'carnegie_classification',
-        'INEXPFTE': 'instructional_expenditure_per_student'
+        'INEXPFTE': 'instructional_expenditure_per_student',
+        'MD_EARN_WNE_P10': 'median_earnings_10yr',
+        'ICLEVEL': 'institution_level',
+        'GRAD_DEBT_MDN': 'median_debt_at_graduation',
+        'COMPL_RPY_3YR_RT': 'repayment_within_3_years'
     })
     
     # Combine public and private net price into a single unified column
@@ -40,7 +45,7 @@ def process_college_data():
     inst_df = inst_df.drop(columns=['net_price_public', 'net_price_private'])
     
     # Drop rows missing critical metrics to keep our vector math clean
-    inst_df = inst_df.dropna(subset=['net_price', 'graduation_rate', 'admission_rate'])
+    inst_df = inst_df.dropna(subset=['net_price', 'graduation_rate', 'admission_rate', 'institution_level'])
     
     # Save to the Data folder
     inst_output_path = 'Data/institutions_clean.csv'
