@@ -265,50 +265,152 @@ if 'top_matches' in st.session_state:
     if matches is None or matches.empty:
         st.warning("⚠️ No matching institutions found meeting your strict constraints. Try broadening your location or budget filters.")
     else:
-        st.success(f"✨ Found {len(matches)} matching institutions ranked by your custom vector model!")
+        st.success(f"Found {len(matches)} matching institutions ranked by your custom vector model!")
         st.divider()
-        
-        for _, row in matches.iterrows():
-            with st.container():
-                cols = st.columns([3, 1, 1])
-                with cols[0]:
-                    st.subheader(f"🎓 {row['school_name']} ({row['state']})")
-                    st.caption(f"Institution ID: `{row['unit_id']}`")
-                with cols[1]:
-                    st.metric("Match Score", f"{row['ranking_score']:.1f}%")
-                with cols[2]:
-                    net_price = row.get('net_price', 0)
-                    st.metric("Net Price", f"${net_price:,.0f}" if pd.notna(net_price) else "N/A")
-                
-                # Secondary metric pills row
-                stat_cols = st.columns(4)
-                grad_rate = row.get('graduation_rate', 0)
-                stat_cols[0].markdown(f"**Graduation Rate:** {grad_rate*100:.1f}%" if pd.notna(grad_rate) else "**Grad Rate:** N/A")
-                
-                prestige = row.get('prestige_score', 0)
-                stat_cols[1].markdown(f"**Prestige Score:** {prestige:.1f}")
-                
-                roi = row.get('roi')
-                if pd.isna(roi):
-                    roi_str = "N/A"
-                elif roi == float("inf"):
-                    roi_str = "∞ (zero debt)"
-                else:
-                    roi_str = f"{roi:.2f}x"
-                stat_cols[2].markdown(f"**Program ROI:** {roi_str}")
-                
-                level_map = {1: "4-Year", 2: "2-Year", 3: "< 2-Year"}
-                lvl = row.get('institution_level')
-                stat_cols[3].markdown(f"**Level:** {level_map.get(lvl, 'Unknown')}")
 
-                # Programmatic XAI Expander & Plotly Chart
-                with st.expander("🔍 Inspect Match Breakdown & Trade-offs"):
-                    # Programmatic narrative sentence
-                    xai_narrative = generate_xai_breakdown(row)
-                    st.write(xai_narrative)
+        constraints_used = st.session_state.get('constraints', {})
+        prestige_weight = constraints_used.get('prestige', 0.5)
+        
+        # Separate the #1 top match from the rest
+        top_match_row = matches.iloc[0]
+        remaining_matches = matches.iloc[1:] if len(matches) > 1 else pd.DataFrame()
+        
+        # ---------------------------------------------------------
+        # TOP MATCH (Centered at the top with special audit dropdown)
+        # ---------------------------------------------------------
+        st.markdown("<h2 style='text-align: center;'>Top Overall Match</h2>", unsafe_allow_html=True)
+        
+        with st.container():
+            cols = st.columns([3, 1, 1])
+            with cols[0]:
+                st.subheader(f"{top_match_row['school_name']} ({top_match_row['state']})")
+                st.caption(f"Institution ID: `{top_match_row['unit_id']}`")
+            with cols[1]:
+                st.metric("Match Score", f"{top_match_row['match_score']:.1f}%")
+            with cols[2]:
+                net_price = top_match_row.get('net_price', 0)
+                st.metric("Net Price", f"${net_price:,.0f}" if pd.notna(net_price) else "N/A")
+            
+            stat_cols = st.columns(4)
+            grad_rate = top_match_row.get('graduation_rate', 0)
+            stat_cols[0].markdown(f"**Graduation Rate:** {grad_rate*100:.1f}%" if pd.notna(grad_rate) else "**Grad Rate:** N/A")
+            
+            prestige = top_match_row.get('prestige_score', 0)
+            stat_cols[1].markdown(f"**Prestige Score:** {prestige:.1f}")
+            
+            roi = top_match_row.get('roi')
+            if pd.isna(roi):
+                roi_str = "N/A"
+            elif roi == float("inf"):
+                roi_str = "∞ (zero debt)"
+            else:
+                roi_str = f"{roi:.2f}x"
+            stat_cols[2].markdown(f"**Program ROI:** {roi_str}")
+            
+            level_map = {1: "4-Year", 2: "2-Year", 3: "< 2-Year"}
+            lvl = top_match_row.get('institution_level')
+            stat_cols[3].markdown(f"**Level:** {level_map.get(lvl, 'Unknown')}")
+
+            # Special deep-dive audit expander for the top match ONLY
+            with st.expander("Inspect Match Breakdown, Internal Vector Audit & Scorecard", expanded=True):
+                st.markdown("### Internal Vector Math & Scorecard Audit")
+                st.markdown("This audit exposes the raw calculations, feature normalizations, and weighting logic that placed this institution at the top of your vector space.")
+                
+                audit_tab, scorecard_tab = st.tabs(["Vector Match Internals", "Institutional Scorecard"])
+                
+                with audit_tab:
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.markdown("#### 1. Normalization & Weights")
+                        st.write(f"• **Raw Net Price:** `${top_match_row.get('net_price', 0):,.0f}` ➔ **Normalized:** `{top_match_row.get('norm_price', 0):.3f}`")
+                        st.write(f"• **Raw Grad Rate:** `{top_match_row.get('graduation_rate', 0)*100:.1f}%` ➔ **Normalized:** `{top_match_row.get('norm_grad', 0):.3f}`")
+                        st.write(f"• **Raw Undergrad Size:** `{top_match_row.get('undergrad_size', 0):,.0f}` ➔ **Normalized:** `{top_match_row.get('norm_size', 0):.3f}`")
+                        st.write(f"• **Applied User Weights:** `{user_weights}`")
+                    with col_b:
+                        st.markdown("#### 2. Composite Scoring Breakdown")
+                        st.write(f"• **Vector Similarity Score:** `{top_match_row['match_score']:.2f}%`")
+                        st.write(f"• **Institutional Prestige Score:** `{top_match_row.get('prestige_score', 0):.2f}`")
+                        st.write(f"• **Prestige Weight Factor:** `{prestige_weight}`")
+                        st.markdown(f"**Final Ranking Score:** `{top_match_row.get('ranking_score', 0):.2f}`")
+                        st.caption("Formula: `[(1 - prestige_weight) * match_score] + [prestige_weight * prestige_score]`")
+
+                with scorecard_tab:
+                    sc_cols = st.columns(3)
+                    with sc_cols[0]:
+                        st.markdown(f"**Admission Rate:** `{top_match_row.get('admission_rate', 0)*100:.1f}%`" if pd.notna(top_match_row.get('admission_rate')) else "**Admission Rate:** N/A")
+                        st.markdown(f"**Average SAT Score:** `{top_match_row.get('average_sat_score', 'N/A')}`")
+                    with sc_cols[1]:
+                        st.markdown(f"**Instructional Spend/Student:** `${top_match_row.get('instructional_expenditure_per_student', 0):,.0f}`" if pd.notna(top_match_row.get('instructional_expenditure_per_student')) else "**Instructional Spend:** N/A")
+                        st.markdown(f"**Median 10-Yr Earnings:** `${float(top_match_row.get('median_earnings_10yr', 0)):,.0f}`" if pd.notna(top_match_row.get('median_earnings_10yr')) and str(top_match_row.get('median_earnings_10yr')) != 'PS' else "**Median Earnings:** N/A")
+                    with sc_cols[2]:
+                        st.markdown(f"**Median Grad Debt:** `${top_match_row.get('median_debt_at_graduation', 'N/A')}`")
+                        st.markdown(f"**3-Yr Repayment Rate:** `{float(top_match_row.get('repayment_within_3_years', 0))*100:.1f}%`" if pd.notna(top_match_row.get('repayment_within_3_years')) and str(top_match_row.get('repayment_within_3_years')) != 'PS' else "**Repayment Rate:** N/A")
+                
+                st.divider()
+
+                xai_narrative = generate_xai_breakdown(top_match_row)
+                st.write(xai_narrative)
+                
+                st.markdown("##### Feature Normalization Contributions")
+                fig = create_delta_bar_chart(top_match_row)
+                st.plotly_chart(fig, width='stretch', key=f"chart_{top_match_row['unit_id']}")
+
+        st.markdown("---")
+        st.markdown("### Other Matching Institutions")
+
+        # ---------------------------------------------------------
+        # REMAINING MATCHES (Standard view)
+        # ---------------------------------------------------------
+        if not remaining_matches.empty:
+            for _, row in remaining_matches.iterrows():
+                with st.container():
+                    cols = st.columns([3, 1, 1])
+                    with cols[0]:
+                        st.subheader(f"{row['school_name']} ({row['state']})")
+                        st.caption(f"Institution ID: `{row['unit_id']}`")
+                    with cols[1]:
+                        st.metric("Match Score", f"{row['match_score']:.1f}%")
+                    with cols[2]:
+                        net_price = row.get('net_price', 0)
+                        st.metric("Net Price", f"${net_price:,.0f}" if pd.notna(net_price) else "N/A")
                     
-                    st.markdown("##### Feature Normalization Contributions")
-                    fig = create_delta_bar_chart(row)
-                    st.plotly_chart(fig, width='stretch', key=f"chart_{row['unit_id']}")
+                    stat_cols = st.columns(4)
+                    grad_rate = row.get('graduation_rate', 0)
+                    stat_cols[0].markdown(f"**Graduation Rate:** {grad_rate*100:.1f}%" if pd.notna(grad_rate) else "**Grad Rate:** N/A")
                     
-            st.markdown("---")
+                    prestige = row.get('prestige_score', 0)
+                    stat_cols[1].markdown(f"**Prestige Score:** {prestige:.1f}")
+                    
+                    roi = row.get('roi')
+                    if pd.isna(roi):
+                        roi_str = "N/A"
+                    elif roi == float("inf"):
+                        roi_str = "∞ (zero debt)"
+                    else:
+                        roi_str = f"{roi:.2f}x"
+                    stat_cols[2].markdown(f"**Program ROI:** {roi_str}")
+                    
+                    level_map = {1: "4-Year", 2: "2-Year", 3: "< 2-Year"}
+                    lvl = row.get('institution_level')
+                    stat_cols[3].markdown(f"**Level:** {level_map.get(lvl, 'Unknown')}")
+
+                    with st.expander("Inspect Match Breakdown & Trade-offs"):
+                        xai_narrative = generate_xai_breakdown(row)
+                        st.write(xai_narrative)
+                        
+                        st.markdown("##### Feature Normalization Contributions")
+                        fig = create_delta_bar_chart(row)
+                        st.plotly_chart(fig, width='stretch', key=f"chart_{row['unit_id']}")
+                        
+                st.markdown("---")
+
+if 'top_matches' not in st.session_state:
+    st.markdown("---")
+footer_html = """
+<div style="text-align: center; color: #666; font-size: 14px; margin-top: 20px; margin-bottom: 20px;">
+    Built by <b>Rahul Govil</b><br>
+    <a href="https://www.linkedin.com/in/govrahul" target="_blank" style="text-decoration: none; color: #0066cc; margin: 0 10px;">LinkedIn</a> | 
+    <a href="https://github.com/govrahul" target="_blank" style="text-decoration: none; color: #0066cc; margin: 0 10px;">GitHub</a>
+</div>
+"""
+st.markdown(footer_html, unsafe_allow_html=True)

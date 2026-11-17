@@ -6,6 +6,8 @@ prompt turns a student's natural-language preferences into structured search
 constraints. The Python engine filters eligible institutions, scores matches,
 and returns up to 10 colleges.
 
+**Deployed app:** https://explainableai-collegepicker.streamlit.app/
+
 ## Current features
 
 - Parse college preferences with Gemini, including states or Census regions,
@@ -28,8 +30,8 @@ and returns up to 10 colleges.
   ROI score where data is available.
 
 The engine returns the top 10 results with scores and source columns for
-inspection. The repository includes a Streamlit web interface and a
-command-line Gemini example.
+inspection. The top match gets an additional XAI audit for users to allow for more interpretability.
+The repository includes a Streamlit web interface and a command-line Gemini example.
 
 ## Project layout
 
