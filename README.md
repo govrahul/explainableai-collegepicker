@@ -8,6 +8,14 @@ and returns up to 10 colleges.
 
 **Deployed app:** https://explainableai-collegepicker.streamlit.app/
 
+## Goal
+
+The goal of this project was to explore the power of white-box and simple ML approaches on complex problems. The engine runs using simple  constraint filtering and vector matching to find the best schools for a given user prompt.
+
+**Conclusions:** White-box algorithms can be extremely powerful, even for complex problems such as finding the right college. By allowing users to see as much information into the algorithm, they are able to make a much more informed decision and understand exactly why a school was recommended to them.
+
+**Note:** This project was not created to denounce black-box algorithms entirely. These models continue to be extremely powerful and are greatly needed in complex environments. This project simply looks at the impact of interpretability by using an entirely white-box approach over a potentially simpler black-box.
+
 ## Current features
 
 - Parse college preferences with Gemini, including states or Census regions,
@@ -107,6 +115,16 @@ that field.
 
 The `max_budget` field is present in the Gemini prompt schema, but a budget
 hard-filter is not currently implemented in the matching engine.
+
+## Limitations and Future Directions
+
+1. Net Price is currently aggregated over all income bands. Future iterations will allow the user to optionally input their family income for a more accurate net price.
+2. The Gemini API occasionally reports constraints inaccurately. This is already visible to users through the "View Parsed AI Constraints" view.
+3. Matching is currently limited to major names in the College Scorecard. Future iterations will use a stronger LLM to also search similar majors outside of the explicit one stated by the user.
+
+## References
+
+1. https://collegescorecard.ed.gov/
 
 ---
 
